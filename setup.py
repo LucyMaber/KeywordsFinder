@@ -8,7 +8,7 @@ setup(
     description="A simple example package",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/mypackage",
+    url="https://github.com/LucyMaber/KeywordsFinder",
     packages=find_packages(),
     install_requires=[],
     classifiers=[
