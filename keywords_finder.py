@@ -4,9 +4,6 @@ import unicodedata
 from typing import List, Tuple, Dict
 import ahocorasick
 
-# Set up logging with DEBUG level for detailed output
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
 
 class KeywordFinder:
     def __init__(self, keywords: List[str]):
@@ -18,7 +15,6 @@ class KeywordFinder:
         for idx, word in enumerate(self.keywords):
             automaton.add_word(word, (idx, word))
         automaton.make_automaton()
-        logger.info("Aho-Corasick automaton built with %d words.", len(self.keywords))
         return automaton
     
     @staticmethod
@@ -45,9 +41,7 @@ class KeywordFinder:
                 continue
             
             matches.append((word, start_index, end_index))
-            logger.debug(f"Matched '{word}' at {start_index}-{end_index}")
         
-        logger.info("Total keywords found: %d", len(matches))
         return matches
     
     def keyword_stats(self, text: str) -> Tuple[int, List[str], List[Tuple[str, int, int]], int]:
