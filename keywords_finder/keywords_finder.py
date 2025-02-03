@@ -1,12 +1,17 @@
 import logging
 import re
 import unicodedata
-from typing import List, Tuple, Dict
+from typing import List, Tuple
 import ahocorasick
+
+# Precompile regex patterns to avoid repeated compilation.
+_NON_WORD_REGEX = re.compile(r"[^\w\s-]")
+_WHITESPACE_REGEX = re.compile(r"\s+")
 
 
 class KeywordFinder:
     def __init__(self, keywords: List[str]):
+        # Store keywords in lower-case for consistency.
         self.keywords = [kw.lower() for kw in keywords]
         self.automaton = self._build_automaton()
     
@@ -19,23 +24,36 @@ class KeywordFinder:
     
     @staticmethod
     def normalize_text(text: str) -> str:
-        """Normalize text by removing accents, punctuation, and extra spaces."""
+        """
+        Normalize text by:
+          - Converting to NFKD form
+          - Removing accents (combining characters)
+          - Removing punctuation (except word characters, spaces, and hyphens)
+          - Replacing multiple spaces with a single space
+          - Lowercasing the result
+        """
         if not text:
             return ""
+        # Normalize and remove diacritics
         text = unicodedata.normalize("NFKD", text)
         text = ''.join(c for c in text if not unicodedata.combining(c))
-        text = re.sub(r"[^\w\s-]", "", text)
-        return re.sub(r"\s+", " ", text).strip().lower()
+        # Remove punctuation using precompiled regex
+        text = _NON_WORD_REGEX.sub("", text)
+        # Replace multiple whitespace with a single space and lower-case the text
+        return _WHITESPACE_REGEX.sub(" ", text).strip().lower()
     
     def find_keywords(self, text: str) -> List[Tuple[str, int, int]]:
-        """Find keyword occurrences in text and return matched phrases with positions."""
+        """
+        Find keyword occurrences in text and return matched phrases with positions.
+        Assumes that the input text is already normalized (i.e. lower-case).
+        """
         matches = []
-        text_lower = text.lower()
-        
+        # Since normalize_text returns lower-case text, no need to call .lower() here.
+        text_lower = text
         for end_index, (idx, word) in self.automaton.iter(text_lower):
             start_index = end_index - len(word) + 1
             
-            # Check word boundaries
+            # Check word boundaries to ensure we have full word matches.
             if (start_index > 0 and text_lower[start_index - 1].isalnum()) or \
                (end_index < len(text_lower) - 1 and text_lower[end_index + 1].isalnum()):
                 continue
@@ -45,12 +63,20 @@ class KeywordFinder:
         return matches
     
     def keyword_stats(self, text: str) -> Tuple[int, List[str], List[Tuple[str, int, int]], int]:
-        """Compute keyword statistics: unique count, matched keywords, occurrences, and total count."""
+        """
+        Compute keyword statistics:
+          - The number of unique keywords found.
+          - A list of unique keywords found.
+          - A list of all occurrences with their positions.
+          - The total number of occurrences.
+        """
         normalized_text = self.normalize_text(text)
         matches = self.find_keywords(normalized_text)
-        unique_keywords = list(set(word for word, _, _ in matches))
+        unique_keywords = list({word for word, _, _ in matches})
         return len(unique_keywords), unique_keywords, matches, len(matches)
 
+
+# Example usage:
 if __name__ == "__main__":
     KEYWORDS = ["trans", "transphobia", "anti-trans", "trans rights"]
     finder = KeywordFinder(KEYWORDS)
